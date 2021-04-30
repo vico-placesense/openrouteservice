@@ -16,8 +16,10 @@ package org.heigit.ors.routing.graphhopper.extensions.core;
 import com.carrotsearch.hppc.IntArrayList;
 import com.carrotsearch.hppc.IntHashSet;
 import com.carrotsearch.hppc.IntObjectMap;
+import com.carrotsearch.hppc.cursors.ObjectCursor;
 import com.carrotsearch.hppc.predicates.IntObjectPredicate;
 import com.carrotsearch.hppc.procedures.IntObjectProcedure;
+import com.graphhopper.coll.GHIntObjectHashMap;
 import com.graphhopper.coll.MapEntry;
 import com.graphhopper.routing.DijkstraBidirectionRef;
 import com.graphhopper.routing.ch.PreparationWeighting;
@@ -29,6 +31,7 @@ import com.graphhopper.routing.util.spatialrules.SpatialRule;
 import com.graphhopper.routing.util.spatialrules.SpatialRuleLookup;
 import com.graphhopper.routing.weighting.AbstractWeighting;
 import com.graphhopper.routing.weighting.ShortestWeighting;
+import com.graphhopper.routing.weighting.TurnWeighting;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.*;
 import com.graphhopper.util.*;
@@ -74,7 +77,7 @@ public class CoreLandmarkStorage implements Storable<LandmarkStorage>{
     private final Weighting weighting;
     private Weighting lmSelectionWeighting;
     private Weighting lmWeighting;
-    private final TraversalMode traversalMode;
+    private TraversalMode traversalMode = TraversalMode.NODE_BASED;
     private boolean initialized;
     private int minimumNodes = 10000;
     private final SubnetworkStorage subnetworkStorage;
@@ -98,8 +101,16 @@ public class CoreLandmarkStorage implements Storable<LandmarkStorage>{
         this.encoder = weighting.getFlagEncoder();
         this.landmarksFilter = landmarksFilter;
 
+        if (weighting.getFlagEncoder().supports(TurnWeighting.class)) {
+            this.lmWeighting = new TurnWeighting(weighting, HelperORS.getTurnCostExtensions(graph.getExtension()));
+            this.traversalMode = TraversalMode.EDGE_BASED;
+        }
+        else {
+            this.lmWeighting = weighting;
+        }
+
         //Adapted from NodeContractor
-        this.lmWeighting = new PreparationWeighting(weighting);
+        this.lmWeighting = new PreparationWeighting(lmWeighting);
         
         this.weighting = weighting;
         // allowing arbitrary weighting is too dangerous
@@ -134,9 +145,6 @@ public class CoreLandmarkStorage implements Storable<LandmarkStorage>{
             }
         };
 
-        // Edge based is not really necessary because when adding turn costs while routing we can still
-        // use the node based traversal as this is a smaller weight approximation and will still produce correct results
-        this.traversalMode = TraversalMode.NODE_BASED;
         final String name = AbstractWeighting.weightingToFileName(weighting) + landmarksFilter.getName();
         this.landmarkWeightDA = dir.find("landmarks_core_" + name);
 
@@ -342,7 +350,7 @@ public class CoreLandmarkStorage implements Storable<LandmarkStorage>{
         else {
             // 1a) pick landmarks via special weighting for a better geographical spreading
             Weighting initWeighting = lmSelectionWeighting;
-            CoreLandmarkExplorer explorer = new CoreLandmarkExplorer(graph, this, initWeighting, traversalMode);
+            CoreLandmarkExplorer explorer = new CoreLandmarkExplorer(graph, this, initWeighting, TraversalMode.NODE_BASED);
             explorer.initFrom(startNode, 0);
             EdgeFilterSequence coreEdgeFilter = new EdgeFilterSequence();
             coreEdgeFilter.add(new CoreAndBlockedEdgesFilter(encoder, true, true, blockedEdges));
@@ -362,7 +370,7 @@ public class CoreLandmarkStorage implements Storable<LandmarkStorage>{
                 if (Thread.currentThread().isInterrupted()) {
                     throw new RuntimeException("Thread was interrupted");
                 }
-                explorer = new CoreLandmarkExplorer(graph, this, initWeighting, traversalMode);
+                explorer = new CoreLandmarkExplorer(graph, this, initWeighting,  TraversalMode.NODE_BASED);
                 explorer.setFilter(coreEdgeFilter);
                 // set all current landmarks as start so that the next getLastNode is hopefully a "far away" node
                 for (int j = 0; j < lmIdx + 1; j++) {
@@ -394,6 +402,7 @@ public class CoreLandmarkStorage implements Storable<LandmarkStorage>{
             coreEdgeFilter.add(landmarksFilter);
             explorer.setFilter(coreEdgeFilter);
             explorer.runAlgo(true, coreEdgeFilter);
+            explorer.initBestWeightMap();
             explorer.initLandmarkWeights(lmIdx, lmNodeId, lmRowLength, fromOffset);
 
             // set subnetwork id to all explored nodes, but do this only for the first landmark
@@ -407,6 +416,7 @@ public class CoreLandmarkStorage implements Storable<LandmarkStorage>{
             coreEdgeFilterBWD.add(landmarksFilter);
             explorer.setFilter(coreEdgeFilterBWD);
             explorer.runAlgo(false, coreEdgeFilterBWD);
+            explorer.initBestWeightMap();
             explorer.initLandmarkWeights(lmIdx, lmNodeId, lmRowLength, toOffset);
 
             if (lmIdx == 0 && explorer.setSubnetworks(subnetworks, subnetworkId))
@@ -793,6 +803,7 @@ public class CoreLandmarkStorage implements Storable<LandmarkStorage>{
         private int lastNode;
         private boolean fromMode;
         private final CoreLandmarkStorage lms;
+        private IntObjectMap<SPTEntry> map;
 
         public CoreLandmarkExplorer(Graph g, CoreLandmarkStorage lms, Weighting weighting, TraversalMode tMode) {
             super(g, weighting, tMode);
@@ -851,7 +862,6 @@ public class CoreLandmarkStorage implements Storable<LandmarkStorage>{
                 throw new IllegalStateException("Too many subnetworks " + subnetworkId);
 
             final AtomicBoolean failed = new AtomicBoolean(false);
-            IntObjectMap<SPTEntry> map = fromMode ? bestWeightMapFrom : bestWeightMapTo;
             map.forEach((IntObjectPredicate<SPTEntry>) (nodeId, value) -> {
                 int sn = subnetworks[coreNodeIdMap.get(nodeId)];
                 if (sn != subnetworkId) {
@@ -872,7 +882,6 @@ public class CoreLandmarkStorage implements Storable<LandmarkStorage>{
         }
 
         public void initLandmarkWeights(final int lmIdx, int lmNodeId, final long rowSize, final int offset) {
-            IntObjectMap<SPTEntry> map = fromMode ? bestWeightMapFrom : bestWeightMapTo;
             final AtomicInteger maxedout = new AtomicInteger(0);
             final Map.Entry<Double, Double> finalMaxWeight = new MapEntry<>(0d, 0d);
 
@@ -891,6 +900,27 @@ public class CoreLandmarkStorage implements Storable<LandmarkStorage>{
                     .append(maxedout.get()).append("/").append(map.size()).append("). Use a bigger factor than ")
                     .append(lms.factor).append(". For example use the following in the config.properties: weighting=")
                     .append(weighting.getName()).append("|maximum=").append(finalMaxWeight.getValue() * 1.2).toString());
+            }
+        }
+
+        public void initBestWeightMap () {
+            if (traversalMode == TraversalMode.NODE_BASED)
+                map = fromMode ? bestWeightMapFrom : bestWeightMapTo;
+
+            if (traversalMode == TraversalMode.EDGE_BASED) {
+                IntObjectMap<SPTEntry> bestWeightMap = fromMode ? bestWeightMapFrom : bestWeightMapTo;
+                map = new GHIntObjectHashMap<>();
+
+                for (ObjectCursor<SPTEntry> bestWeightMapEntry : bestWeightMap.values()) {
+                    SPTEntry sptEntry = bestWeightMapEntry.value;
+                    int node = sptEntry.adjNode;
+                    double weight = sptEntry.weight;
+
+                    SPTEntry entry = (SPTEntry) map.get(node);
+
+                    if (entry == null || entry.weight > weight)
+                        map.put(node, sptEntry);
+                }
             }
         }
 
