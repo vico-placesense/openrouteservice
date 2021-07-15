@@ -176,7 +176,7 @@ public class CoreAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorato
     }
 
     /**
-     * Decouple CH profiles from PrepareContractionHierarchies as we need CH profiles for the
+     * Decouple CH profiles from PrepareCore as we need CH profiles for the
      * graphstorage and the graphstorage for the preparation.
      */
     public CoreAlgoFactoryDecorator addCHProfile(CHProfile chProfile) {
@@ -327,13 +327,9 @@ public class CoreAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorato
     }
 
     private PrepareCore createCHPreparation(GraphHopperStorage ghStorage, CHProfile chProfile, EdgeFilter restrictionFilter) {
-        PrepareCore tmpPrepareCore = new PrepareCore(
-                new GHDirectory("", DAType.RAM_INT), ghStorage, ghStorage.getCHGraph(chProfile), restrictionFilter);
-        tmpPrepareCore.setPeriodicUpdates(preparationPeriodicUpdates).
-                setLazyUpdates(preparationLazyUpdates).
-                setNeighborUpdates(preparationNeighborUpdates).
-                setLogMessages(preparationLogMessages);
-        return tmpPrepareCore;
+        PrepareCore tmpPrepareCH = new PrepareCore(ghStorage, chProfile, restrictionFilter);
+        //FIXME tmpPrepareCH.setParams(pMap);
+        return tmpPrepareCH;
     }
 
     private EdgeFilter createCoreEdgeFilter(CHProfile chProfile, GraphHopperStorage gs, GraphProcessContext processContext) {

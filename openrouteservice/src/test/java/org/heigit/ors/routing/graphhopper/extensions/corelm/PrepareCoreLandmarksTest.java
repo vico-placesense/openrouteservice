@@ -85,14 +85,16 @@ public class PrepareCoreLandmarksTest
     }
 
     public CHGraph contractGraph(GraphHopperStorage g, CoreTestEdgeFilter restrictedEdges) {
-        CHGraph lg = g.getCHGraph(new CHProfile(weighting, tm, TurnWeighting.INFINITE_U_TURN_COSTS, "core"));
-        PrepareCore prepare = new PrepareCore(dir, g, lg, restrictedEdges);
+        CHProfile chProfile = new CHProfile(weighting, tm, TurnWeighting.INFINITE_U_TURN_COSTS, "core");
+        CHGraph lg = g.getCHGraph(chProfile);
+        PrepareCore prepare = new PrepareCore(g, chProfile, restrictedEdges);
 
+        //FIXME
         // set contraction parameters to prevent test results from changing when algorithm parameters are tweaked
-        prepare.setPeriodicUpdates(20);
-        prepare.setLazyUpdates(10);
-        prepare.setNeighborUpdates(20);
-        prepare.setContractedNodes(100);
+        //prepare.setPeriodicUpdates(20);
+        //prepare.setLazyUpdates(10);
+        //prepare.setNeighborUpdates(20);
+        //prepare.setContractedNodes(100);
 
         prepare.doWork();
 
