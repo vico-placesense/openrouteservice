@@ -564,7 +564,7 @@ public class PrepareCore extends AbstractAlgoPreparation implements RoutingAlgor
         static Params forTraversalMode(TraversalMode traversalMode) {
             if (traversalMode.isEdgeBased()) {
                 // todo: optimize
-q                return new Params(0, 100, 0, 100, 5);
+                return new Params(0, 100, 0, 100, 5);
             } else {
                 return new Params(20, 10, 20, 99, 20);
             }
