@@ -349,4 +349,22 @@ public class ToyGraphCreationUtil {
 
         return g;
     }
+
+    public static GraphHopperStorage createGraphForIssue1074(GraphHopperStorage g) {
+        // 6-----3
+        // |    /|
+        // |   / |
+        // 5--2--4
+        //    |
+        //    1--0
+        g.edge(0, 1, 1, true); //0
+        g.edge(1, 2, 1, true); //1 R
+        g.edge(2, 3, 1, true); //2
+        g.edge(3, 4, 1, true); //3
+        g.edge(4, 2, 1, true); //4
+        g.edge(2, 5, 1, true); //5 R
+        g.edge(5, 6, 1, true); //6
+        g.edge(3, 6, 9, true); //7
+        return g;
+    }
 }
