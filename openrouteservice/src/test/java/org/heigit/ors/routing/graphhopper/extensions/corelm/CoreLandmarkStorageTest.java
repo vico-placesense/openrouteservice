@@ -34,6 +34,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.HashMap;
 
+import static org.heigit.ors.routing.graphhopper.extensions.core.CoreLMPreparationHandler.createCoreNodeIdMap;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -95,20 +96,6 @@ public class CoreLandmarkStorageTest {
         addEdge(7, 8, 3); // restricted in #3 and #4
     }
 
-    private HashMap<Integer, Integer> createCoreNodeIdMap(RoutingCHGraph core) {
-        HashMap<Integer, Integer> coreNodeIdMap = new HashMap<>();
-        int nodes = core.getNodes();
-        int coreNodeLevel = nodes;
-        int index = 0;
-        for (int i = 0; i < nodes; i++){
-            if (core.getLevel(i) < coreNodeLevel)
-                continue;
-            coreNodeIdMap.put(i, index);
-            index++;
-        }
-        return coreNodeIdMap;
-    }
-
     private void contractGraph(CoreTestEdgeFilter restrictedEdges) {
         contractGraph(restrictedEdges, null);
     }
@@ -143,7 +130,7 @@ public class CoreLandmarkStorageTest {
 
     private CoreLandmarkStorage createLandmarks(LMEdgeFilterSequence lmEdgeFilter) {
         HashMap<Integer, Integer> coreNodeIdMap = createCoreNodeIdMap(routingCHGraph);
-        CoreLMConfig coreLMConfig = new CoreLMConfig(encoder.toString(), weighting, lmEdgeFilter);
+        CoreLMConfig coreLMConfig = new CoreLMConfig(encoder.toString(), weighting).setEdgeFilter(lmEdgeFilter);
         CoreLandmarkStorage storage = new CoreLandmarkStorage(dir, graph, coreLMConfig, 2);
         storage.setCoreNodeIdMap(coreNodeIdMap);
         storage.setMinimumNodes(2);
