@@ -816,6 +816,26 @@ public class RouteRequest extends APIRequest {
             routingRequest.setMaximumSpeed(maximumSpeed);
         }
 
+        if (this.hasSchedule()) {
+            routingRequest.setSchedule(schedule);
+        }
+
+        if (this.hasWalkingTime()) {
+            routingRequest.setWalking_time(walkingTime);
+        }
+
+        if (this.hasScheduleRows()) {
+            routingRequest.setScheduleRows(scheduleRows);
+        }
+
+        if (this.hasIgnoreTransfers()) {
+            routingRequest.setIgnoreTransfers(ignoreTransfers);
+        }
+
+        if (this.hasScheduleDuration()) {
+            routingRequest.setScheduleDuaration(scheduleDuration);
+        }
+
         int profileType = -1;
 
         int coordinatesLength = coordinates.size();
