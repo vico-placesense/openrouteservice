@@ -342,6 +342,8 @@ public class RoutingProfileManager {
         int profileType = req.getSearchParameters().getProfileType();
         double[] radiuses = null;
 
+        //TODO: extract gtfs parameters, forward to "compute route"
+
         if (req.getSearchParameters().getAlternativeRoutesCount() > 1 && coords.length > 2) {
             throw new InternalServerException(RoutingErrorCodes.INVALID_PARAMETER_VALUE, "Alternative routes algorithm does not support more than two way points.");
         }

@@ -860,6 +860,8 @@ public class RoutingProfile {
 
         beginUseGH();
 
+        //TODO: get pt params somehow, forward to GHRequest OR into ORSGraphHopper??
+
         try {
             int profileType = searchParams.getProfileType();
             int weightingMethod = searchParams.getWeightingMethod();
