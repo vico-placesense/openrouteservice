@@ -19,6 +19,7 @@ import com.vividsolutions.jts.geom.Coordinate;
 import org.heigit.ors.common.DistanceUnit;
 import org.heigit.ors.common.ServiceRequest;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,6 +45,11 @@ public class RoutingRequest extends ServiceRequest {
 	private List<Integer> skipSegments = new ArrayList<>();
 	private boolean includeCountryInfo = false;
 	private double maximumSpeed;
+	private boolean schedule;
+	private Duration scheduleDuaration;
+	private int scheduleRows;
+	private Duration walking_time;
+	private boolean ignoreTransfers;
 
 	private String responseFormat = "json";
 
@@ -233,4 +239,46 @@ public class RoutingRequest extends ServiceRequest {
 	public boolean isRoundTripRequest() {
 		return this.coordinates.length == 1 && this.searchParameters.getRoundTripLength() > 0;
 	}
+
+	public boolean getSchedule() {
+		return schedule;
+	}
+
+	public void setSchedule(boolean schedule) {
+		this.schedule = schedule;
+	}
+
+	public Duration getScheduleDuaration() {
+		return scheduleDuaration;
+	}
+
+	public void setScheduleDuaration(Duration scheduleDuaration) {
+		this.scheduleDuaration = scheduleDuaration;
+	}
+
+	public int getScheduleRows() {
+		return scheduleRows;
+	}
+
+	public void setScheduleRows(int scheduleRows) {
+		this.scheduleRows = scheduleRows;
+	}
+
+	public Duration getWalking_time() {
+		return walking_time;
+	}
+
+	public void setWalking_time(Duration walking_time) {
+		this.walking_time = walking_time;
+	}
+
+	public boolean getIgnoreTransfers() {
+		return ignoreTransfers;
+	}
+
+	public void setIgnoreTransfers(boolean ignoreTransfers) {
+		this.ignoreTransfers = ignoreTransfers;
+	}
+
+
 }
